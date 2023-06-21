@@ -1,23 +1,25 @@
 (ns cljbicc.core
-  (:require [clojure.java.shell :refer [sh]]
-            [clojure.tools.cli :refer [parse-opts]]))
+  (:require [clojure.string :as string]
+            [clojure.java.shell :as shell]
+            [clojure.tools.cli :as cli]
 
-(defn long-str [& strings] (clojure.string/join "\n" strings))
+            [cljbicc.asm :as asm])
+  (:import  [java.io File]))
 
 (defn compile-cljbicc
   "Compile a number to a program"
   [num]
-  (long-str
-   "  .globl main"
-   "main:"
-   (format "  mov $%d, %%rax" num)
-   "  ret"))
+  (asm/gas 
+    [[:.global :main]
+     [:main 
+      [:mov num :%rax]
+      :ret]]))
 
 (defn run-x86-64 [asm]
-  (let [tmp-file (java.io.File/createTempFile "tmp" "")
+  (let [tmp-file (File/createTempFile "tmp" "")
         tmp-file-path (.getAbsolutePath tmp-file)]
-    (sh "cc" "-x" "assembler" "-static" "-o" tmp-file-path "-" :in asm)
-    (let [exitcode (:exit (sh tmp-file-path))]
+    (shell/sh "cc" "-x" "assembler" "-static" "-o" tmp-file-path "-" :in asm)
+    (let [exitcode (:exit (shell/sh tmp-file-path))]
       (.delete tmp-file)
       exitcode)))
 
@@ -33,12 +35,11 @@
    ["-h" "--help"]])
 
 (defn -main [& args]
-  (if-let [{{num :number} :options} (parse-opts args cli-options)]
+  (if-let [{{num :number} :options} (cli/parse-opts args cli-options)]
     (if (not= num nil)
       (->>
        num
-       compile-cljbicc
-       run-x86-64
+       compile-and-run
        (printf "Got exit code %s.%n"))
       (throw (Exception. "Please provide a number via `-n`")))
     (throw (Exception. "Please provide a number via `-n`"))))
