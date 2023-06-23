@@ -17,3 +17,9 @@
     (is (= 15 (compile-and-run "5 * (9 - 6)")))
     (is (= 4 (compile-and-run "(3 + 5) /2")))
     (is (= 7 (compile-and-run "1 + (4-2) *    3")))))
+
+(deftest unary-positive-negative
+  (testing "Compiling basic arithematic expression"
+    (is (= 10 (compile-and-run "-10 +20")))
+    (is (= 10 (compile-and-run "- - 10")))
+    (is (= 10 (compile-and-run "- - + 10")))))

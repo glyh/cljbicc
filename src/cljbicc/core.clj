@@ -19,8 +19,11 @@
     [:mul lhs rhs] 
     (concat (compile-exp rhs) [[:push :%rax]] (compile-exp lhs) [[:pop :%rdi] [:imul :%rdi :%rax]])
     [:div lhs rhs] 
-    (concat (compile-exp rhs) [[:push :%rax]] (compile-exp lhs) [[:pop :%rdi] [:cqo] [:idiv :%rdi]])
-    term [[:mov (asm/gas-term term) :%rax]]))
+    (concat (compile-exp rhs) [[:push :%rax]] (compile-exp lhs) [[:pop :%rdi] :cqo [:idiv :%rdi]])
+    [:negative inner] 
+    (concat (compile-exp inner) [[:neg :%rax]])
+    term 
+    [[:mov (asm/gas-term term) :%rax]]))
 
 (defn compile-cljbicc
   "Compile code to a assembly"
@@ -28,7 +31,7 @@
   (m/match (p/parser code)
     [_ parsed]
     (do 
-     (printf "Parsed: %s%n" parsed)
+     #_(printf "Parsed: %s%n" parsed)
      (asm/gas 
            [[:.global :main]
             (concat 
@@ -43,6 +46,8 @@
       (flush)
       (System/exit 1))))
 
+; (compile-cljbicc "- + + - 10")
+
 (defn run-x86-64 [asm]
   (if (nil? asm)
     "nothing"
@@ -50,7 +55,7 @@
           tmp-file-path (.getAbsolutePath tmp-file)
           as-result (shell/sh "cc" "-x" "assembler" "-static" "-o" tmp-file-path "-" :in asm)]
       (printf "Assembly generated:%n%s%n%n" asm)
-      (printf "Assembler result:%n%s%n%s%n" (:out as-result) (:err as-result))
+      #_(printf "Assembler result:%n%s%n%s%n" (:out as-result) (:err as-result))
       (let [{:keys [exit]} (shell/sh tmp-file-path)]
         (.delete tmp-file)
         exit))))

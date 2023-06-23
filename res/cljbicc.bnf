@@ -4,11 +4,14 @@ S = exp1
 add = exp1 <"+"> exp2
 sub = exp1 <"-"> exp2
 
-<exp2> = exp-atom | mul | div
-mul = exp2 <"*"> exp-atom
-div = exp2 <"/"> exp-atom
+<exp2> = exp3 | mul | div
+mul = exp2 <"*"> exp3
+div = exp2 <"/"> exp3
 
-<exp-atom> = INT 
-         | <"("> exp1 <")">
+<exp3> = exp-atom | positive | negative
+<positive> = <"+"> exp3
+negative = <"-"> exp3
+
+<exp-atom> = INT | <"("> exp1 <")">
 
 INT = #"[0-9]+"
