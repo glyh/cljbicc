@@ -12,22 +12,33 @@
 
 (defn compile-exp [exp]
   (m/match exp
-    [:+ lhs term] (conj (compile-exp lhs) [:add (asm/gas-term  term) :%rax])
-    [:- lhs term] (conj (compile-exp lhs) [:sub (asm/gas-term term) :%rax])
-    term [[:mov (asm/gas-term term) :%rax]]))
+    [:+ lhs term] 
+    (conj (compile-exp lhs) [:add (asm/gas-term term) :%rax])
+    [:- lhs term] 
+    (conj (compile-exp lhs) [:sub (asm/gas-term term) :%rax])
+    term 
+    [[:mov (asm/gas-term term) :%rax]]))
 
 (defn compile-cljbicc
   "Compile code to a assembly"
   [code]
-  (let [[_ parsed] (p/parser code)]
+  (m/match (p/parser code)
+    [_ parsed]
     (asm/gas 
-      [[:.global :main]
-       (concat 
-        [:main]
-        (compile-exp parsed)
-        [:ret])])))
+          [[:.global :main]
+           (concat 
+            [:main]
+            (compile-exp parsed)
+            [:ret])])
+    {:line l 
+     :column c
+     :reason s}
+    (do 
+      (printf "Error on line %d col %d, reason: %s%n" l c)
+      (System/exit 1))))
 
-(compile-cljbicc "1 + 3 - 4")
+(compile-cljbicc "1++")
+
 (defn run-x86-64 [asm]
   (let [tmp-file (File/createTempFile "tmp" "")
         tmp-file-path (.getAbsolutePath tmp-file)]
