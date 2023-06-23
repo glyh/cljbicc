@@ -1,5 +1,14 @@
-S = exp 
-exp = INT 
-    | exp "+" INT
-    | exp "-" INT
+S = exp1
+
+<exp1> = exp2 | add | sub
+add = exp1 <"+"> exp2
+sub = exp1 <"-"> exp2
+
+<exp2> = exp-atom | mul | div
+mul = exp2 <"*"> exp-atom
+div = exp2 <"/"> exp-atom
+
+<exp-atom> = INT 
+         | <"("> exp1 <")">
+
 INT = #"[0-9]+"

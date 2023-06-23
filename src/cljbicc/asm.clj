@@ -31,5 +31,5 @@
 (defn gas [asm-tree]
   (->> 
     asm-tree
-    (map gas-section)
-    (string/join "\n")))
+    (map (comp #(str % "\n") gas-section))
+    string/join))

@@ -11,3 +11,9 @@
   (testing "Compiling a sum/different expression"
     (is (= 8 (compile-and-run "1 + 3 - 5 + 9")))
     (is (= 21 (compile-and-run "5 + 20 - 4")))))
+
+(deftest basic-arithmetic 
+  (testing "Compiling basic arithematic expression"
+    (is (= 15 (compile-and-run "5 * (9 - 6)")))
+    (is (= 4 (compile-and-run "(3 + 5) /2")))
+    (is (= 7 (compile-and-run "1 + (4-2) *    3")))))

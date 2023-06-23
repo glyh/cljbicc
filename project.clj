@@ -6,7 +6,7 @@
   :dependencies [[org.clojure/clojure "1.11.1"]
                  [instaparse "1.4.12"]
                  [org.clojure/core.match "1.0.1"]
-                 [org.babashka/cli "0.7.52"]]
+                 [org.clojure/tools.cli "1.0.219"]]
   :repl-options {:init-ns cljbicc.core}
   :main cljbicc.core
   :resource-paths ["res"]
