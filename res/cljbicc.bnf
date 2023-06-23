@@ -1,0 +1,5 @@
+S = exp 
+exp = INT 
+    | exp "+" INT
+    | exp "-" INT
+INT = #"[0-9]+"

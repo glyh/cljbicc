@@ -5,6 +5,9 @@
             :url "https://www.eclipse.org/legal/epl-2.0/"}
   :dependencies [[org.clojure/clojure "1.11.1"]
                  [instaparse "1.4.12"]
-                 [org.clojure/tools.cli "1.0.219"]]
+                 [org.clojure/core.match "1.0.1"]
+                 [org.babashka/cli "0.7.52"]]
   :repl-options {:init-ns cljbicc.core}
-  :main cljbicc.core)
+  :main cljbicc.core
+  :resource-paths ["res"]
+  :profiles {:uberjar {:aot :all}})

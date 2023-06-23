@@ -1,0 +1,6 @@
+ignore = inline-comment | multiline-comment | whitespace
+
+inline-comment = #"//[^\n]+"
+multiline-comment = "/*" ( #"([^*]|\*[^/])+" | multiline-comment )* "*/"
+whitespace = #"[\n\s]+"
+

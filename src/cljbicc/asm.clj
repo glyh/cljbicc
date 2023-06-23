@@ -3,16 +3,16 @@
     [clojure.string :as string]
     [clojure.core.match :refer [match]]))
 
+(defn gas-term [term]
+  (cond 
+    (keyword? term) (name term)
+    (number? term) (str "$" term)
+    :else (str term)))
 
-(defn- gas-term [term]
-  (if (= (type term) clojure.lang.Keyword)
-    (name term)
-    (str term)))
-    
 (defn- gas-3ac [statement]
   (match statement
     [op lhs rhs] (format "  %s %s, %s" (gas-term op) (gas-term lhs) (gas-term rhs))
-    op           (gas-term op)))
+    op           (str "  " (gas-term op))))
 
 (defn- gas-section [[head & rest :as sect]]
   (if (string/starts-with? (name head) ".")
