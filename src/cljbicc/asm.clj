@@ -12,6 +12,7 @@
 (defn- gas-3ac [statement]
   (match statement
     [op lhs rhs] (format "  %s %s, %s" (gas-term op) (gas-term lhs) (gas-term rhs))
+    [op reg] (format "  %s %s" (gas-term op) (gas-term reg))
     op           (str "  " (gas-term op))))
 
 (defn- gas-section [[head & rest :as sect]]

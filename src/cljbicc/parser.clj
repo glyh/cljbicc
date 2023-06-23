@@ -8,14 +8,9 @@
     (io/resource "cljbicc.bnf")
     :auto-whitespace ignore))
 
-(defn transform-exp 
-  ([atom] atom)
-  ([lhs op rhs] [(keyword op) lhs rhs]))
-
-(def cljbicc-transforma
+(def cljbicc-transform
   (partial 
    insta/transform 
-   {:exp transform-exp
-    :INT (fn [i] (Integer/parseInt i))}))
+   {:INT (fn [i] (Integer/parseInt i))}))
 
-(def parser (comp cljbicc-transforma cljbicc-parse))
+(def parser (comp cljbicc-transform cljbicc-parse))

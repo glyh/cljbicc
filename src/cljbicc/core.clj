@@ -3,7 +3,6 @@
             [babashka.cli :as cli]
             [clojure.core.match :as m]
 
-
             [cljbicc.asm :as asm]
             [cljbicc.parser :as p])
 
@@ -12,10 +11,14 @@
 
 (defn compile-exp [exp]
   (m/match exp
-    [:+ lhs term] 
-    (conj (compile-exp lhs) [:add (asm/gas-term term) :%rax])
-    [:- lhs term] 
-    (conj (compile-exp lhs) [:sub (asm/gas-term term) :%rax])
+    [:add lhs rhs] 
+    (concat (compile-exp lhs) [[:push :%rax]] (compile-exp rhs) [[:pop :%rdi] [:add :%rdi :%rax]])
+    [:sub lhs rhs] 
+    (concat (compile-exp lhs) [[:push :%rax]] (compile-exp rhs) [[:pop :%rdi] [:sub :%rdi :%rax]])
+    [:mul lhs rhs] 
+    (concat (compile-exp lhs) [[:push :%rax]] (compile-exp rhs) [[:pop :%rdi] [:imul :%rdi :%rax]])
+    [:div lhs rhs] 
+    (concat (compile-exp lhs) [[:push :%rax]] (compile-exp rhs) [[:pop :%rdi] [:cqo] [:idiv :%rdi :%rax]])
     term 
     [[:mov (asm/gas-term term) :%rax]]))
 
@@ -31,13 +34,10 @@
             (compile-exp parsed)
             [:ret])])
     {:line l 
-     :column c
-     :reason s}
+     :column c}
     (do 
-      (printf "Error on line %d col %d, reason: %s%n" l c)
+      (printf "Error on line %d col %d%n" l c)
       (System/exit 1))))
-
-(compile-cljbicc "1++")
 
 (defn run-x86-64 [asm]
   (let [tmp-file (File/createTempFile "tmp" "")
