@@ -1,7 +1,12 @@
 (ns cljbicc.codegen
   (:require [clojure.core.match :as m]
             [cljbicc.asm :as asm]))
-  
+
+(defn panic [msg] 
+  (print msg)
+  (flush)
+  (System/exit 1)) 
+
 (declare compile-exp)
 
 (defn compile-binary [op lhs rhs] 
@@ -22,13 +27,15 @@
     :lt [[:cmp :%rdi :%rax] [:setl :%al] [:movzb :%al :%rax]]
     :le [[:cmp :%rdi :%rax] [:setle :%al] [:movzb :%al :%rax]]
     :gt [[:cmp :%rdi :%rax] [:setg :%al] [:movzb :%al :%rax]]
-    :ge [[:cmp :%rdi :%rax] [:setge :%al] [:movzb :%al :%rax]])))
+    :ge [[:cmp :%rdi :%rax] [:setge :%al] [:movzb :%al :%rax]]
+    _ (panic "Unexpected binary head\n"))))
 
 (defn compile-unary [op inner]
   (concat 
     (compile-exp inner)
     (m/match op
-      :negative [[:neg :%rax]])))
+      :negative [[:neg :%rax]]
+      _ (panic "Unexpected unary head\n"))))
 
 (defn compile-exp [exp]
   (m/match exp
@@ -36,23 +43,29 @@
     [op inner] (compile-unary op inner)
     term [[:mov (asm/gas-term term) :%rax]]))
 
-(defn codegen
-  "Compile code to a assembly"
-  [code]
-  (m/match code
-    [_ parsed]
-    (do 
-     #_(printf "Parsed: %s%n" parsed)
-     (asm/gas 
-           [[:.global :main]
-            (concat 
-             [:main]
-             (compile-exp parsed)
-             [:ret])]))
-    
-    {:line l 
-     :column c}
-    (do 
-      (printf "Error on line %d col %d%n" l c)
-      (flush)
-      (System/exit 1))))
+(defn compile-stmt
+  "Compile a statement to assembly"
+  [stmt]
+  (m/match stmt
+    [:expr-stmt [:exp expr]] (compile-exp expr)
+    _ (panic "Unexpected stmt head\n")))
+  
+(defn compile-program 
+  "Compile program ast to assembly"
+  [ast]
+  (m/match ast
+    [:program & stmts]
+    (asm/gas 
+      [[:.global :main]
+       (concat
+         [:main]
+         (apply concat (map compile-stmt stmts))
+         [:ret])])
+    _ (panic "Unexpected ast head\n")))
+
+(defn codegen 
+  "Compile ast to assembly"
+  [ast]
+  (m/match ast
+   [_ parsed] (compile-program parsed)
+   {:line l :column c} (panic (format "Error on line %d col %d%n" l c))))

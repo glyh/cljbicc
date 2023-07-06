@@ -11,26 +11,27 @@
   (:import  [java.io File])
   (:gen-class))
 
-
-; (compile-cljbicc "- + + - 10")
-
 (defn run-x86-64 [asm]
   (if (nil? asm)
     "nothing"
     (let [tmp-file (File/createTempFile "tmp" "")
           tmp-file-path (.getAbsolutePath tmp-file)
           as-result (shell/sh "cc" "-x" "assembler" "-static" "-o" tmp-file-path "-" :in asm)]
-      ; (printf "Assembly generated:%n%s%n%n" asm)
-      ; (printf "Assembler result:%n%s%n%s%n" (:out as-result) (:err as-result))
+      #_(printf "Assembly generated:%n%s%n%n" asm)
+      #_(printf "Assembler result:%n%s%n%s%n" (:out as-result) (:err as-result))
       (let [{:keys [exit]} (shell/sh tmp-file-path)]
         (.delete tmp-file)
         exit))))
 
+(defn cljbicc-compile [exp]
+  (->>
+    exp
+    p/parse
+    c/codegen))
 (defn compile-and-run [exp]
   (->>
     exp 
-    p/parse
-    c/codegen
+    cljbicc-compile
     run-x86-64))
 
 (def cli-options

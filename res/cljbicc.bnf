@@ -1,4 +1,8 @@
-S = exp0
+S = program
+
+program = expr-stmt+
+expr-stmt = exp <";">
+exp = exp0
 
 <exp0> = exp1 | eq | ne | lt | le | gt | ge
 eq = exp1 <"=="> exp1
