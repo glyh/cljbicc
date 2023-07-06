@@ -1,10 +1,12 @@
 S = exp0
 
-<exp0> = exp1 | eq | ne | lt | le 
+<exp0> = exp1 | eq | ne | lt | le | gt | ge
 eq = exp1 <"=="> exp1
 ne = exp1 <"!="> exp1
 lt = exp1 <"<"> exp1
 le = exp1 <"<="> exp1
+gt = exp1 <">"> exp1
+ge = exp1 <">="> exp1
 
 <exp1> = exp2 | add | sub
 add = exp1 <"+"> exp2

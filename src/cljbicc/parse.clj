@@ -1,4 +1,4 @@
-(ns cljbicc.parser
+(ns cljbicc.parse
   (:require [instaparse.core :as insta]
             [clojure.java.io :as io]))
 
@@ -13,4 +13,4 @@
    insta/transform 
    {:INT (fn [i] (Integer/parseInt i))}))
 
-(def parser (comp cljbicc-transform cljbicc-parse))
+(def parse (comp cljbicc-transform cljbicc-parse))

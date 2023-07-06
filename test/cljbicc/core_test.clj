@@ -23,3 +23,28 @@
     (is (= 10 (compile-and-run "-10 +20")))
     (is (= 10 (compile-and-run "- - 10")))
     (is (= 10 (compile-and-run "- - + 10")))))
+
+(deftest comparison-eq-ne
+  (testing "Compiling EQ/NE expression"
+    (is (= 0 (compile-and-run "0 == 1")))
+    (is (= 1 (compile-and-run "42 == 42")))
+    (is (= 1 (compile-and-run "0 != 1")))
+    (is (= 0 (compile-and-run "42 != 42")))))
+
+(deftest comparison-le-lt
+  (testing "Compiling LE/LT expression"
+    (is (= 1 (compile-and-run "0 <  1")))
+    (is (= 0 (compile-and-run "1 <  1")))
+    (is (= 0 (compile-and-run "2 <  1")))
+    (is (= 1 (compile-and-run "0 <= 1")))
+    (is (= 1 (compile-and-run "1 <= 1")))
+    (is (= 0 (compile-and-run "2 <= 1")))))
+
+(deftest comparison-ge-gt
+ (testing "Compiling LE/LT expression"
+   (is (= 1 (compile-and-run "1 >  0")))
+   (is (= 0 (compile-and-run "1 >  1")))
+   (is (= 0 (compile-and-run "1 >  2")))
+   (is (= 1 (compile-and-run "1 >= 0")))
+   (is (= 1 (compile-and-run "1 >= 1")))
+   (is (= 0 (compile-and-run "1 >= 2")))))
