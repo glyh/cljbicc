@@ -10,20 +10,39 @@
   (:import  [java.io File])
   (:gen-class))
 
+(declare compile-exp)
+
+(defn compile-binary [op lhs rhs] 
+  (concat
+   (compile-exp rhs) 
+   [[:push :%rax]]
+   (compile-exp lhs)
+   [[:pop :%rdi]]
+   (m/match op
+    ; basic arithemetic
+    :add [[:add :%rdi :%rax]]
+    :sub [[:sub :%rdi :%rax]]
+    :mul [[:imul :%rdi :%rax]]
+    :div [:cqo [:idiv :%rdi]]
+    ; comparison
+    :eq [[:cmp :%rdi :%rax] [:sete :%al] [:movzb :%al :%rax]]
+    :ne [[:cmp :%rdi :%rax] [:setne :%al] [:movzb :%al :%rax]]
+    :lt [[:cmp :%rdi :%rax] [:setl :%al] [:movzb :%al :%rax]]
+    :le [[:cmp :%rdi :%rax] [:setle :%al] [:movzb :%al :%rax]]
+    :gt [[:cmp :%rdi :%rax] [:setg :%al] [:movzb :%al :%rax]]
+    :ge [[:cmp :%rdi :%rax] [:setge :%al] [:movzb :%al :%rax]])))
+
+(defn compile-unary [op inner]
+  (concat 
+    (compile-exp inner)
+    (m/match op
+      :negative [[:neg :%rax]])))
+
 (defn compile-exp [exp]
   (m/match exp
-    [:add lhs rhs] 
-    (concat (compile-exp rhs) [[:push :%rax]] (compile-exp lhs) [[:pop :%rdi] [:add :%rdi :%rax]])
-    [:sub lhs rhs] 
-    (concat (compile-exp rhs) [[:push :%rax]] (compile-exp lhs) [[:pop :%rdi] [:sub :%rdi :%rax]])
-    [:mul lhs rhs] 
-    (concat (compile-exp rhs) [[:push :%rax]] (compile-exp lhs) [[:pop :%rdi] [:imul :%rdi :%rax]])
-    [:div lhs rhs] 
-    (concat (compile-exp rhs) [[:push :%rax]] (compile-exp lhs) [[:pop :%rdi] :cqo [:idiv :%rdi]])
-    [:negative inner] 
-    (concat (compile-exp inner) [[:neg :%rax]])
-    term 
-    [[:mov (asm/gas-term term) :%rax]]))
+    [op lhs rhs] (compile-binary op lhs rhs)
+    [op inner] (compile-unary op inner)
+    term [[:mov (asm/gas-term term) :%rax]]))
 
 (defn compile-cljbicc
   "Compile code to a assembly"
@@ -54,8 +73,8 @@
     (let [tmp-file (File/createTempFile "tmp" "")
           tmp-file-path (.getAbsolutePath tmp-file)
           as-result (shell/sh "cc" "-x" "assembler" "-static" "-o" tmp-file-path "-" :in asm)]
-      (printf "Assembly generated:%n%s%n%n" asm)
-      #_(printf "Assembler result:%n%s%n%s%n" (:out as-result) (:err as-result))
+      ; (printf "Assembly generated:%n%s%n%n" asm)
+      ; (printf "Assembler result:%n%s%n%s%n" (:out as-result) (:err as-result))
       (let [{:keys [exit]} (shell/sh tmp-file-path)]
         (.delete tmp-file)
         exit))))
