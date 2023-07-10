@@ -1,8 +1,16 @@
 S = program
 
-program = expr-stmt+
+program = stmt+
+<stmt> = expr-stmt
+
 expr-stmt = exp <";">
-exp = exp0
+exp = expn1
+
+<expn1> = assign | exp0
+assign = lval <"="> expn1
+
+<lval> = id
+id = IDENT
 
 <exp0> = exp1 | eq | ne | lt | le | gt | ge
 eq = exp1 <"=="> exp1
@@ -24,6 +32,7 @@ div = exp2 <"/"> exp3
 <positive> = <"+"> exp3
 negative = <"-"> exp3
 
-<exp-atom> = INT | <"("> exp1 <")">
+<exp-atom> = INT | id | <"("> exp1 <")">
 
 INT = #"[0-9]+"
+IDENT = #"[a-z]"

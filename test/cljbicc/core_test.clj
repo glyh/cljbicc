@@ -48,3 +48,9 @@
    (is (= 1 (compile-and-run "1 >= 0;")))
    (is (= 1 (compile-and-run "1 >= 1;")))
    (is (= 0 (compile-and-run "1 >= 2;")))))
+
+(deftest single-character-variables
+  (testing "Compiling single character variables"
+    (is (= 3 (compile-and-run "a = 3; a;")))
+    (is (= 8 (compile-and-run "a = 3; z = 5; a + z;")))
+    (is (= 6 (compile-and-run "a = b = 3; a + b;")))))

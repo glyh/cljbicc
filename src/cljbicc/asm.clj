@@ -7,7 +7,11 @@
   (cond 
     (keyword? term) (name term)
     (number? term) (str "$" term)
-    :else (str term)))
+    :else
+    (match term
+      [:mem reg] (str "(" (name reg) ")")
+      [:mem offset reg] (str offset "(" (name reg) ")")
+      _ (str term))))
 
 (defn- gas-3ac [statement]
   (match statement
