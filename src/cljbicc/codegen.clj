@@ -87,6 +87,7 @@
   [stmt]
   (m/match stmt
     [:expr-stmt [:exp expr]] (compile-exp expr)
+    [:return-stmt [:exp expr]] (concat (compile-exp expr) [[:jmp :.L.return]])
     _ (panic "Unexpected stmt head\n")))
   
 (defn compile-program 
@@ -105,10 +106,12 @@
             [:push :%rbp]
             [:mov :%rsp :%rbp]
             [:sub (:stacksize @info) :%rsp]] ; 26 local variables, and each take 8 byte
-           stmt-generated
-           [[:mov :%rbp :%rsp]
+           stmt-generated)
+         [:.L.return
+            [:mov :%rbp :%rsp]
             [:pop :%rbp]
-            :ret])]))
+            :ret]]))
+          
     _ (panic "Unexpected ast head\n")))
 
 (defn codegen 

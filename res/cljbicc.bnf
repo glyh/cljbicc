@@ -1,9 +1,22 @@
 S = program
 
 program = stmt+
-<stmt> = expr-stmt
+
+
+(**************)
+(* Statements *)
+(**************)
+
+<stmt> = expr-stmt | return-stmt
+
+return-stmt = <"return"> exp <";">
 
 expr-stmt = exp <";">
+
+(***************)
+(* Expressions *)
+(***************)
+
 exp = expn1
 
 <expn1> = assign | exp0
@@ -35,6 +48,11 @@ negative = <"-"> exp3
 <exp-atom> = INT | id-atom | <"("> exp1 <")">
 
 id-atom = IDENT
+
+
+(*********)
+(* Atoms *)
+(*********)
 
 INT = #"[0-9]+"
 IDENT = #"[a-zA-Z_][a-zA-Z0-9_]*"

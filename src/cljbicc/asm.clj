@@ -20,7 +20,7 @@
     op           (str "  " (gas-term op))))
 
 (defn- gas-section [[head & rest :as sect]]
-  (if (string/starts-with? (name head) ".")
+  (if (#{:.globl} head)
     (->>
       sect
       (map gas-term)
