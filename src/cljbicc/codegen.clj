@@ -7,6 +7,10 @@
   (flush)
   (System/exit 1))
 
+(defn align-to [n align] (* align (quot (+ n align -1) align)))
+
+(def info (atom nil))
+
 (declare compile-exp)
 (declare compile-assign)
 
@@ -35,11 +39,25 @@
         _ (panic "Unexpected binary head\n")))))
 
 ; Compute the memory address of a given lval
+
+
+(defn try-insert-local-var [{symtab :symtab :as info} identifier]
+  (if (contains? symtab identifier)
+    info
+    (let [offset (* 8 (+ 1 (count symtab)))]
+      {:symtab (conj symtab [identifier (- offset)])
+       :stacksize (align-to offset 16)})))
+    
+(defn query-or-generate-local-var-offset [identifier]
+  (swap! info #(try-insert-local-var %1 identifier))
+  (get-in @info [:symtab identifier]))
+
+;(* 8 (+ 1 (- (int identifier)) (int \a)))
 (defn compile-addr [lval]
   (m/match lval
     [:id identifier] 
-    (let [offset (* 8 (+ 1 (- (int identifier)) (int \a)))]
-      [[:lea [:mem (- offset) :%rbp] :%rax]])
+    (let [offset (query-or-generate-local-var-offset identifier)]
+      [[:lea [:mem offset :%rbp] :%rax]])
     _ (panic "Unexpected address\n")))
 
 (defn compile-assign [lval rhs]
@@ -59,7 +77,7 @@
 
 (defn compile-exp [exp]
   (m/match exp
-    [:id _] (concat (compile-addr exp) [[:mov [:mem :%rax] :%rax]])
+    [:id-atom id] (concat (compile-addr [:id id]) [[:mov [:mem :%rax] :%rax]])
     [op lhs rhs] (compile-binary op lhs rhs)
     [op inner] (compile-unary op inner)
     term [[:mov (asm/gas-term term) :%rax]]))
@@ -74,19 +92,23 @@
 (defn compile-program 
   "Compile program ast to assembly"
   [ast]
+  (reset! info {:symtab {} :stacksize 0})
   (m/match ast
     [:program & stmts]
-    (asm/gas 
-      [[:.globl :main]
-       (concat
-         [:main
-          [:push :%rbp]
-          [:mov :%rsp :%rbp]
-          [:sub 208 :%rsp]] ; 26 local variables, and each take 8 byte
-         (apply concat (map compile-stmt stmts))
-         [[:mov :%rbp :%rsp]
-          [:pop :%rbp]
-          :ret])])
+    ;; Note that compile-stmt is effectful and it affects (:stacksize @info), we have to call it earlier
+    (let [stmt-generated (apply concat (map compile-stmt stmts))]
+      ; (println @info)
+      (asm/gas 
+        [[:.globl :main]
+         (concat
+           [:main
+            [:push :%rbp]
+            [:mov :%rsp :%rbp]
+            [:sub (:stacksize @info) :%rsp]] ; 26 local variables, and each take 8 byte
+           stmt-generated
+           [[:mov :%rbp :%rsp]
+            [:pop :%rbp]
+            :ret])]))
     _ (panic "Unexpected ast head\n")))
 
 (defn codegen 

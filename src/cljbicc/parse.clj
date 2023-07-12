@@ -11,7 +11,7 @@
 (def cljbicc-transform
   (partial 
    insta/transform 
-   {:INT (fn [i] (Integer/parseInt i))
-    :IDENT (fn [id] (first id))})) ;; id only contains 1 char so it's safe to just grab the first character.
+   {:INT   (fn [i] (Integer/parseInt i))
+    :IDENT identity})) ;; id only contains 1 char so it's safe to just grab the first character.
 
 (def parse (comp cljbicc-transform cljbicc-parse))

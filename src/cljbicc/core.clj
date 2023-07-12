@@ -30,6 +30,7 @@
     c/codegen))
 
 (defn compile-and-run [exp]
+  ; (printf "Code fetched `%s`%n" exp)
   (->>
     exp 
     cljbicc-compile

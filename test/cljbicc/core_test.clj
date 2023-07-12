@@ -54,3 +54,9 @@
     (is (= 3 (compile-and-run "a = 3; a;")))
     (is (= 8 (compile-and-run "a = 3; z = 5; a + z;")))
     (is (= 6 (compile-and-run "a = b = 3; a + b;")))))
+
+(deftest multi-character-variables 
+  (testing "Test multi char variables"
+    (is (= 3 (compile-and-run "foo = 3; foo;")))
+    (is (= 8 (compile-and-run "foo123 = 3; bar = 5; foo123 + bar;")))
+    (is (= 6 (compile-and-run "a = b = 3; a + b;")))))
