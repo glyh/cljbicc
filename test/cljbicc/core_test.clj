@@ -51,18 +51,22 @@
 
 (deftest single-character-variables
   (testing "Compiling single character variables"
-    (is (= 3 (compile-and-run "a = 3; return a;")))
-    (is (= 8 (compile-and-run "a = 3; z = 5; return a + z;")))
-    (is (= 6 (compile-and-run "a = b = 3; return a + b;")))))
+    (is (= 3 (compile-and-run "{a = 3; return a;}")))
+    (is (= 8 (compile-and-run "{a = 3; z = 5; return a + z;}")))
+    (is (= 6 (compile-and-run "{a = b = 3; return a + b;}")))))
 
 (deftest multi-character-variables 
   (testing "Test multi char variables"
-    (is (= 3 (compile-and-run "foo = 3; return foo;")))
-    (is (= 8 (compile-and-run "foo123 = 3; bar = 5; return foo123 + bar;")))
-    (is (= 6 (compile-and-run "a = b = 3; return a + b;")))))
+    (is (= 3 (compile-and-run "{foo = 3; return foo;}")))
+    (is (= 8 (compile-and-run "{foo123 = 3; bar = 5; return foo123 + bar;}")))
+    (is (= 6 (compile-and-run "{a = b = 3; return a + b;}")))))
 
 (deftest return
   (testing "Test return"
-    (is (= 1 (compile-and-run "return 1; 2; 3;")))
-    (is (= 2 (compile-and-run "1; return 2; 3;")))
-    (is (= 3 (compile-and-run "1; 2; return 3;")))))
+    (is (= 1 (compile-and-run "{return 1; 2; 3;}")))
+    (is (= 2 (compile-and-run "{1; return 2; 3;}")))
+    (is (= 3 (compile-and-run "{1; 2; return 3;}")))))
+
+(deftest block-stmt
+  (testing "Test block stmt"
+    (is (= 3 (compile-and-run "{ {1; {2;} return 3;} }")))))

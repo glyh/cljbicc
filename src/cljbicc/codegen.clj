@@ -87,6 +87,7 @@
   [stmt]
   (m/match stmt
     [:expr-stmt [:exp expr]] (compile-exp expr)
+    [:block-stmt & stmts] (apply concat (map compile-stmt stmts))
     [:return-stmt [:exp expr]] (concat (compile-exp expr) [[:jmp :.L.return]])
     _ (panic "Unexpected stmt head\n")))
   
@@ -95,9 +96,9 @@
   [ast]
   (reset! info {:symtab {} :stacksize 0})
   (m/match ast
-    [:program & stmts]
+    [:program stmt]
     ;; Note that compile-stmt is effectful and it affects (:stacksize @info), we have to call it earlier
-    (let [stmt-generated (apply concat (map compile-stmt stmts))]
+    (let [stmt-generated (compile-stmt stmt)]
       ; (println @info)
       (asm/gas 
         [[:.globl :main]

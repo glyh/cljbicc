@@ -1,17 +1,20 @@
 S = program
 
-program = stmt+
+program = stmt
 
 
 (**************)
 (* Statements *)
 (**************)
 
-<stmt> = expr-stmt | return-stmt
+<stmt> = expr-stmt | return-stmt | block-stmt
+
+block-stmt = <"{"> stmt* <"}">
 
 return-stmt = <"return"> exp <";">
 
 expr-stmt = exp <";">
+
 
 (***************)
 (* Expressions *)
