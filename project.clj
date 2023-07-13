@@ -5,6 +5,7 @@
             :url "https://www.eclipse.org/legal/epl-2.0/"}
   :dependencies [[org.clojure/clojure "1.11.1"]
                  [instaparse "1.4.12"]
+                 [com.rpl/specter "1.1.4"]
                  [org.clojure/core.match "1.0.1"]
                  [org.clojure/tools.cli "1.0.219"]]
   :repl-options {:init-ns cljbicc.core}

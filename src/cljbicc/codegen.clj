@@ -1,6 +1,7 @@
 (ns cljbicc.codegen
   (:require [clojure.core.match :as m]
-            [cljbicc.asm :as asm]))
+            [cljbicc.asm :as asm])
+  (:use     com.rpl.specter))
 
 (defn panic [msg]
   (print msg)
@@ -38,21 +39,21 @@
         :ge [[:cmp :%rdi :%rax] [:setge :%al] [:movzb :%al :%rax]]
         _ (panic "Unexpected binary head\n")))))
 
-; Compute the memory address of a given lval
-
-
 (defn try-insert-local-var [{symtab :symtab :as info} identifier]
   (if (contains? symtab identifier)
     info
     (let [offset (* 8 (+ 1 (count symtab)))]
-      {:symtab (conj symtab [identifier (- offset)])
-       :stacksize (align-to offset 16)})))
+      (->> 
+        info 
+        (setval [:symtab identifier] (- offset))
+        (setval [:stacksize] (align-to offset 16))))))
     
+; Compute the memory address of a given lval
 (defn query-or-generate-local-var-offset [identifier]
-  (swap! info #(try-insert-local-var %1 identifier))
-  (get-in @info [:symtab identifier]))
+ (swap! info #(try-insert-local-var %1 identifier))
+ (get-in @info [:symtab identifier]))
 
-;(* 8 (+ 1 (- (int identifier)) (int \a)))
+; (* 8 (+ 1 (- (int identifier)) (int \a)))
 (defn compile-addr [lval]
   (m/match lval
     [:id identifier] 
@@ -82,11 +83,46 @@
     [op inner] (compile-unary op inner)
     term [[:mov (asm/gas-term term) :%rax]]))
 
+(defn generate-label-counter []
+  (transform [ATOM :label-counter] inc info)
+  (:label-counter @info))
+
+(defn generate-if-label []
+  (let [counter (generate-label-counter)]
+    [(str ".L.else." counter)
+     (str ".L.end" counter)]))
+    
+(declare compile-stmt)
+
+(defn compile-if [params]
+  (let [[else-label end-label] (generate-if-label)]
+    (m/match params
+      [[:exp test] then else]
+      (concat
+        (compile-exp test) 
+        [[:cmp 0 :%rax] 
+         [:je else-label]]
+        (compile-stmt then)
+        [[:jmp end-label]
+         [:label else-label]]
+        (compile-stmt else)
+        [[:label end-label]])
+      [[:exp test] then]
+      (concat
+        (compile-exp test) 
+        [[:cmp 0 :%rax] 
+         [:je end-label]]
+        (compile-stmt then)
+        [[:label end-label]])
+      _ (panic "Syntax error for if statement\n"))))
+      
+
 (defn compile-stmt
   "Compile a statement to assembly"
   [stmt]
   (m/match stmt
     [:expr-stmt [:exp expr]] (compile-exp expr)
+    [:if-stmt & params] (compile-if params)
     [:expr-stmt] [] ; null statement
     [:block-stmt & stmts] (apply concat (map compile-stmt stmts))
     [:return-stmt [:exp expr]] (concat (compile-exp expr) [[:jmp :.L.return]])
@@ -95,25 +131,24 @@
 (defn compile-program 
   "Compile program ast to assembly"
   [ast]
-  (reset! info {:symtab {} :stacksize 0})
+  (reset! info {:symtab {} :stacksize 0 :label-counter 0})
   (m/match ast
     [:program stmt]
     ;; Note that compile-stmt is effectful and it affects (:stacksize @info), we have to call it earlier
     (let [stmt-generated (compile-stmt stmt)]
       ; (println @info)
       (asm/gas 
-        [[:.globl :main]
-         (concat
-           [:main
-            [:push :%rbp]
-            [:mov :%rsp :%rbp]
-            [:sub (:stacksize @info) :%rsp]] ; 26 local variables, and each take 8 byte
-           stmt-generated)
-         [:.L.return
-            [:mov :%rbp :%rsp]
-            [:pop :%rbp]
-            :ret]]))
-          
+        (concat
+         [[:.globl :main]
+          [:label "main"]
+          [:push :%rbp]
+          [:mov :%rsp :%rbp]
+          [:sub (:stacksize @info) :%rsp]]
+         stmt-generated
+         [[:label ".L.return"]
+          [:mov :%rbp :%rsp]
+          [:pop :%rbp]
+          :ret])))
     _ (panic "Unexpected ast head\n")))
 
 (defn codegen 

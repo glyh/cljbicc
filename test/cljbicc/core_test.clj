@@ -74,3 +74,13 @@
 (deftest null-stmt
   (testing "Test null stmt"
     (is (= 5 (compile-and-run "{ ;;;; return 5; }")))))
+
+(deftest if-stmt
+  (testing "Test if stmt"
+    (is (= 3 (compile-and-run "{ if (0) return 2; return 3; }")))
+    (is (= 3 (compile-and-run "{ if (1-1) return 2; return 3; }")))
+    (is (= 2 (compile-and-run "{ if (1) return 2; return 3; }")))
+    (is (= 2 (compile-and-run "{ if (2-1) return 2; return 3; }")))
+    (is (= 4 (compile-and-run "if (0) { 1; 2; return 3; } else { return 4; } ")))
+    (is (= 3 (compile-and-run "if (1) { 1; 2; return 3; } else { return 4; } ")))))
+  
