@@ -3,8 +3,8 @@
             [cljbicc.asm :as asm])
   (:use     com.rpl.specter))
 
-(defn panic [msg]
-  (print msg)
+(defn panic [& msg-param]
+  (apply printf msg-param)
   (flush)
   (System/exit 1))
 
@@ -142,7 +142,7 @@
     [:expr-stmt] [] ; null statement
     [:block-stmt & stmts] (apply concat (map compile-stmt stmts))
     [:return-stmt [:exp expr]] (concat (compile-exp expr) [[:jmp :.L.return]])
-    _ (panic "Unexpected stmt head\n")))
+    _ (panic "Unexpected stmt head: %s\n" stmt)))
   
 (defn compile-program 
   "Compile program ast to assembly"
@@ -165,10 +165,10 @@
           [:mov :%rbp :%rsp]
           [:pop :%rbp]
           :ret])))
-    _ (panic "Unexpected ast head\n")))
+    _ (panic "Unexpected ast head: %s\n" ast)))
 
 (defn codegen 
   [parse-result]
   (m/match parse-result
     [_ parsed] (compile-program parsed)
-    {:line l :column c} (panic (format "Error on line %d col %d%n" l c))))
+    {:line l :column c} (panic "Error on line %d col %d%n" l c)))
