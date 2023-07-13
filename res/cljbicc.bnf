@@ -7,7 +7,9 @@ program = stmt
 (* Statements *)
 (**************)
 
-<stmt> = expr-stmt | return-stmt | block-stmt | if-stmt | for-stmt
+<stmt> = expr-stmt | return-stmt | block-stmt | if-stmt | for-stmt | while-stmt
+
+while-stmt = <"while" "("> exp <")"> stmt
 
 if-stmt = <"if" "("> exp <")"> stmt (<"else"> stmt)?
 

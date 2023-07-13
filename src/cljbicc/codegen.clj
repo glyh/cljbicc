@@ -138,6 +138,7 @@
     [:if-stmt [:exp test] then] (compile-if test then nop)
     [:for-stmt init test step body] (compile-for init test [:expr-stmt step] body)
     [:for-stmt init test body] (compile-for init test nop body)
+    [:while-stmt test body] (compile-for nop [:expr-stmt test] nop body)
     [:expr-stmt] [] ; null statement
     [:block-stmt & stmts] (apply concat (map compile-stmt stmts))
     [:return-stmt [:exp expr]] (concat (compile-exp expr) [[:jmp :.L.return]])
