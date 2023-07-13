@@ -53,13 +53,14 @@
  (swap! info #(try-insert-local-var %1 identifier))
  (get-in @info [:symtab identifier]))
 
-; (* 8 (+ 1 (- (int identifier)) (int \a)))
 (defn compile-addr [lval]
   (m/match lval
     [:id identifier] 
     (let [offset (query-or-generate-local-var-offset identifier)]
       [[:lea [:mem offset :%rbp] :%rax]])
-    _ (panic "Unexpected address\n")))
+    [:deref inner]
+    (compile-exp inner)
+    _ (panic "Unexpected address: %s\n" lval)))
 
 (defn compile-assign [lval rhs]
   (concat 
@@ -70,15 +71,15 @@
      [:mov :%rax [:mem :%rdi]]]))
 
 (defn compile-unary [op inner]
-  (concat 
-    (compile-exp inner)
-    (m/match op
-      :negative [[:neg :%rax]]
-      _ (panic "Unexpected unary head\n"))))
+  (m/match op
+    :negative (concat (compile-exp inner) [[:neg :%rax]])
+    :addr (compile-addr inner)
+    :deref (concat (compile-exp inner) [[:mov [:mem :%rax] :%rax]])
+    _ (panic "Unexpected unary head\n")))
 
 (defn compile-exp [exp]
   (m/match exp
-    [:id-atom id] (concat (compile-addr [:id id]) [[:mov [:mem :%rax] :%rax]])
+    [:id id] (concat (compile-addr [:id id]) [[:mov [:mem :%rax] :%rax]])
     [op lhs rhs] (compile-binary op lhs rhs)
     [op inner] (compile-unary op inner)
     term [[:mov (asm/gas-term term) :%rax]]))
@@ -170,5 +171,5 @@
 (defn codegen 
   [parse-result]
   (m/match parse-result
-    [_ parsed] (compile-program parsed)
+    [:S parsed] (compile-program parsed)
     {:line l :column c} (panic "Error on line %d col %d%n" l c)))

@@ -29,10 +29,7 @@ expr-stmt = exp? <";">
 exp = expn1
 
 <expn1> = assign | exp0
-assign = lval <"="> expn1
-
-<lval> = id
-id = IDENT
+assign = exp0 <"="> expn1
 
 <exp0> = exp1 | eq | ne | lt | le | gt | ge
 eq = exp1 <"=="> exp1
@@ -50,13 +47,15 @@ sub = exp1 <"-"> exp2
 mul = exp2 <"*"> exp3
 div = exp2 <"/"> exp3
 
-<exp3> = exp-atom | positive | negative
+<exp3> = exp-atom | positive | negative | addr | deref
 <positive> = <"+"> exp3
 negative = <"-"> exp3
+addr = <"&"> exp3
+deref = <"*"> exp3
 
-<exp-atom> = INT | id-atom | <"("> exp1 <")">
+<exp-atom> = INT | id | <"("> exp1 <")">
 
-id-atom = IDENT
+id = IDENT
 
 
 (*********)
