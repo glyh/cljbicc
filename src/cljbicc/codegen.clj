@@ -87,6 +87,7 @@
   [stmt]
   (m/match stmt
     [:expr-stmt [:exp expr]] (compile-exp expr)
+    [:expr-stmt] [] ; null statement
     [:block-stmt & stmts] (apply concat (map compile-stmt stmts))
     [:return-stmt [:exp expr]] (concat (compile-exp expr) [[:jmp :.L.return]])
     _ (panic "Unexpected stmt head\n")))

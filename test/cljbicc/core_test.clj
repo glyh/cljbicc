@@ -70,3 +70,7 @@
 (deftest block-stmt
   (testing "Test block stmt"
     (is (= 3 (compile-and-run "{ {1; {2;} return 3;} }")))))
+
+(deftest null-stmt
+  (testing "Test null stmt"
+    (is (= 5 (compile-and-run "{ ;;;; return 5; }")))))

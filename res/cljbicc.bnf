@@ -13,7 +13,7 @@ block-stmt = <"{"> stmt* <"}">
 
 return-stmt = <"return"> exp <";">
 
-expr-stmt = exp <";">
+expr-stmt = exp? <";">
 
 
 (***************)
