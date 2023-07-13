@@ -90,39 +90,54 @@
 (defn generate-if-label []
   (let [counter (generate-label-counter)]
     [(str ".L.else." counter)
-     (str ".L.end" counter)]))
+     (str ".L.end_if." counter)]))
     
 (declare compile-stmt)
 
-(defn compile-if [params]
+(defn compile-if [test then else]
   (let [[else-label end-label] (generate-if-label)]
-    (m/match params
-      [[:exp test] then else]
-      (concat
-        (compile-exp test) 
-        [[:cmp 0 :%rax] 
-         [:je else-label]]
-        (compile-stmt then)
-        [[:jmp end-label]
-         [:label else-label]]
-        (compile-stmt else)
-        [[:label end-label]])
-      [[:exp test] then]
-      (concat
-        (compile-exp test) 
-        [[:cmp 0 :%rax] 
-         [:je end-label]]
-        (compile-stmt then)
-        [[:label end-label]])
-      _ (panic "Syntax error for if statement\n"))))
-      
+    (concat
+     (compile-exp test) 
+     [[:cmp 0 :%rax] 
+      [:je else-label]]
+     (compile-stmt then)
+     [[:jmp end-label]
+      [:label else-label]]
+     (compile-stmt else)
+     [[:label end-label]])))
 
+(defn generate-for-label []
+  (let [counter (generate-label-counter)]
+    [(str ".L.begin_for." counter)
+     (str ".L.end_for." counter)]))
+
+(def nop [:expr-stmt])
+
+(defn compile-for [init test step body]
+  (let [[begin-label end-label] (generate-for-label)]
+    (concat 
+     (compile-stmt init)
+     [[:label begin-label]]
+     (if (not= nop test) 
+       (concat 
+        (compile-stmt test)
+        [[:cmp 0 :%rax]
+         [:je end-label]])
+       [])
+     (compile-stmt body)
+     (compile-stmt step)
+     [[:jmp begin-label]
+      [:label end-label]])))
+  
 (defn compile-stmt
   "Compile a statement to assembly"
   [stmt]
   (m/match stmt
     [:expr-stmt [:exp expr]] (compile-exp expr)
-    [:if-stmt & params] (compile-if params)
+    [:if-stmt [:exp test] then else] (compile-if test then else)
+    [:if-stmt [:exp test] then] (compile-if test then nop)
+    [:for-stmt init test step body] (compile-for init test [:expr-stmt step] body)
+    [:for-stmt init test body] (compile-for init test nop body)
     [:expr-stmt] [] ; null statement
     [:block-stmt & stmts] (apply concat (map compile-stmt stmts))
     [:return-stmt [:exp expr]] (concat (compile-exp expr) [[:jmp :.L.return]])
