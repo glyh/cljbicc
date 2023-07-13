@@ -99,6 +99,6 @@
     (is (= 3 (compile-and-run "{ x = 3; y = &x; z = &y; return **z; }")))
     ;; WARN: these two case is different from cases we have in chibicc because the 
     ;; memory layout I use is different from the one used in chibicc
-    (is (= 5 (compile-and-run "{ x = 3; y = 5; return *(&x - 8); }")))
-    (is (= 3 (compile-and-run "{ x = 3; y = 5; return *(&y + 8); }")))
-    (is (= 5 (compile-and-run "{ x = 3; y = &x; *y = 5; return *(&y + 8); }")))))
+    (is (= 5 (compile-and-run "{ x = 3; y = 5; return *(&x - 1); }")))
+    (is (= 3 (compile-and-run "{ x = 3; y = 5; return *(&y + 1); }")))
+    (is (= 5 (compile-and-run "{ x = 3; y = &x; *y = 5; return *(1 + &y); }")))))

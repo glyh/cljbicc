@@ -1,3 +1,6 @@
+;; For now I am using metadata to store types. this is becaue I didn't consider that I need more information annotated to the AST. If redesigning this probably something else would be better.
+;; And another part this code is ugly is that type checking and code generation is written together. Ideally there should be another phase solely for type checks.
+
 (ns cljbicc.codegen
   (:require [clojure.core.match :as m]
             [cljbicc.asm :as asm])
@@ -19,25 +22,97 @@
   (m/match 
     op
     :assign (compile-assign lhs rhs)
-    _ (concat
-       (compile-exp rhs)
-       [[:push :%rax]]
-       (compile-exp lhs)
-       [[:pop :%rdi]]
-       (m/match op
-        ; basic arithemetic
-        :add [[:add :%rdi :%rax]]
-        :sub [[:sub :%rdi :%rax]]
-        :mul [[:imul :%rdi :%rax]]
-        :div [:cqo [:idiv :%rdi]]
-        ; comparison
-        :eq [[:cmp :%rdi :%rax] [:sete :%al] [:movzb :%al :%rax]]
-        :ne [[:cmp :%rdi :%rax] [:setne :%al] [:movzb :%al :%rax]]
-        :lt [[:cmp :%rdi :%rax] [:setl :%al] [:movzb :%al :%rax]]
-        :le [[:cmp :%rdi :%rax] [:setle :%al] [:movzb :%al :%rax]]
-        :gt [[:cmp :%rdi :%rax] [:setg :%al] [:movzb :%al :%rax]]
-        :ge [[:cmp :%rdi :%rax] [:setge :%al] [:movzb :%al :%rax]]
-        _ (panic "Unexpected binary head\n")))))
+    ;; we allow: addition between: 
+    ;; num and num -> num
+    ;; num and pointer -> pointer
+    ;; pointer and num -> pointer
+    :add 
+    (let [rhs-compiled (compile-exp rhs)
+          rhs-meta (meta rhs-compiled)
+          lhs-compiled (compile-exp lhs)
+          lhs-meta (meta lhs-compiled)]
+      (m/match [(:type lhs-meta) (:type rhs-meta)]
+        [(:or :int :any) (:or :int :any)]
+        (with-meta
+         (concat 
+           rhs-compiled
+           [[:push :%rax]]
+           lhs-compiled
+           [[:pop :%rdi]
+            [:add :%rdi :%rax]])
+         lhs-meta) 
+        [[:pointer _] :int]
+        (with-meta 
+          (concat 
+           rhs-compiled
+           [[:shl 3 :%rax]
+            [:push :%rax]]
+           lhs-compiled
+           [[:pop :%rdi]
+            [:add :%rdi :%rax]])
+          lhs-meta)
+        [:int [:pointer _]]
+        (with-meta 
+          (concat 
+           rhs-compiled
+           [[:push :%rax]]
+           lhs-compiled
+           [[:shl 3 :%rax]
+            [:pop :%rdi]
+            [:add :%rdi :%rax]])
+         rhs-meta)
+        :else (panic "Type error: addition may only appear between ints or an int and a pointer, we got (%s, %s) for %s%n" lhs-meta rhs-meta [op lhs rhs])))
+    ;; we allow: subtraction between: 
+    ;; num and num -> num
+    ;; pointer and num -> pointer
+    :sub 
+    (let [rhs-compiled (compile-exp rhs)
+          rhs-meta (meta rhs-compiled)
+          lhs-compiled (compile-exp lhs)
+          lhs-meta (meta lhs-compiled)]
+      (m/match [(:type lhs-meta) (:type rhs-meta)]
+        [(:or :int :any) (:or :int :any)]
+        (with-meta
+          (concat
+           rhs-compiled
+           [[:push :%rax]]
+           lhs-compiled
+           [[:pop :%rdi]
+            [:sub :%rdi :%rax]])
+          lhs-meta)
+        [[:pointer _] :int]
+        (with-meta 
+          (concat
+           rhs-compiled
+           [[:shl 3 :%rax]
+            [:push :%rax]]
+           lhs-compiled
+           [[:pop :%rdi]
+            [:sub :%rdi :%rax]])
+          lhs-meta)
+
+        :else (panic "Type error: subtraction may only appear between ints or a pointer and(before) an int, we got (%s, %s) for %s%n" lhs-meta rhs-meta [op lhs rhs])))
+    _ 
+    (let [rhs-compiled (compile-exp rhs)]
+      (with-meta 
+       (concat
+        rhs-compiled
+        [[:push :%rax]]
+        (compile-exp lhs)
+        [[:pop :%rdi]]
+        (m/match op
+         ; basic arithemetic
+         :mul [[:imul :%rdi :%rax]]
+         :div [:cqo [:idiv :%rdi]]
+         ; comparison
+         :eq [[:cmp :%rdi :%rax] [:sete :%al] [:movzb :%al :%rax]]
+         :ne [[:cmp :%rdi :%rax] [:setne :%al] [:movzb :%al :%rax]]
+         :lt [[:cmp :%rdi :%rax] [:setl :%al] [:movzb :%al :%rax]]
+         :le [[:cmp :%rdi :%rax] [:setle :%al] [:movzb :%al :%rax]]
+         :gt [[:cmp :%rdi :%rax] [:setg :%al] [:movzb :%al :%rax]]
+         :ge [[:cmp :%rdi :%rax] [:setge :%al] [:movzb :%al :%rax]]
+         _ (panic "Unexpected binary head\n")))
+       (meta rhs-compiled)))))
 
 (defn try-insert-local-var [{symtab :symtab :as info} identifier]
   (if (contains? symtab identifier)
@@ -63,26 +138,53 @@
     _ (panic "Unexpected address: %s\n" lval)))
 
 (defn compile-assign [lval rhs]
-  (concat 
-    (compile-addr lval)
-    [[:push :%rax]] 
-    (compile-exp rhs)
-    [[:pop :%rdi]
-     [:mov :%rax [:mem :%rdi]]]))
+  (let [rhs-compiled (compile-exp rhs)
+        rhs-meta (meta rhs-compiled)]
+    (with-meta
+     (concat 
+        (compile-addr lval)
+        [[:push :%rax]] 
+        rhs-compiled
+        [[:pop :%rdi]
+         [:mov :%rax [:mem :%rdi]]])
+     rhs-meta))) 
 
 (defn compile-unary [op inner]
   (m/match op
-    :negative (concat (compile-exp inner) [[:neg :%rax]])
-    :addr (compile-addr inner)
-    :deref (concat (compile-exp inner) [[:mov [:mem :%rax] :%rax]])
+    :negative 
+    (let [inner-compiled (compile-exp inner)
+          inner-meta (meta inner-compiled)]
+      (with-meta 
+        (concat inner-compiled [[:neg :%rax]])
+        inner-meta))
+    :addr 
+    (let [inner-compiled (compile-addr inner)
+          inner-meta (meta inner-compiled)]
+      (with-meta 
+        inner-compiled
+        (transform [:type] #(vector :pointer %1) inner-meta)))
+      
+    :deref 
+    (let [inner-compiled (compile-exp inner)
+          inner-meta (meta inner-compiled)]
+      (with-meta 
+        (concat inner-compiled [[:mov [:mem :%rax] :%rax]])
+        (m/match (:type inner-meta)
+           [:pointer pointed] (setval [:type] pointed inner-meta)
+           :any inner-meta
+           _ (panic "Type error: expected pointer in %s but got %s" inner (:type inner-meta)))))
+      
     _ (panic "Unexpected unary head\n")))
 
 (defn compile-exp [exp]
   (m/match exp
-    [:id id] (concat (compile-addr [:id id]) [[:mov [:mem :%rax] :%rax]])
+    [:id id] 
+    (with-meta (concat (compile-addr [:id id]) [[:mov [:mem :%rax] :%rax]]) {:type :any})
     [op lhs rhs] (compile-binary op lhs rhs)
     [op inner] (compile-unary op inner)
-    term [[:mov (asm/gas-term term) :%rax]]))
+    ;; NOTE: for now we only have integer and pointer so a term must be an integer
+    term 
+    ^{:type :int} [[:mov (asm/gas-term term) :%rax]]))
 
 (defn generate-label-counter []
   (transform [ATOM :label-counter] inc info)
