@@ -92,3 +92,13 @@
 (deftest while-stmt
   (testing "Test while stmt"
     (is (= 10 (compile-and-run "{i = 0; while(i < 10) {i = i + 1; } return i; }")))))
+
+(deftest ref-and-deref
+  (testing "Test ref and deref"
+    (is (= 3 (compile-and-run "{ x = 3; return *&x; }")))
+    (is (= 3 (compile-and-run "{ x = 3; y = &x; z = &y; return **z; }")))
+    ;; WARN: these two case is different from cases we have in chibicc because the 
+    ;; memory layout I use is different from the one used in chibicc
+    (is (= 5 (compile-and-run "{ x = 3; y = 5; return *(&x - 8); }")))
+    (is (= 3 (compile-and-run "{ x = 3; y = 5; return *(&y + 8); }")))
+    (is (= 5 (compile-and-run "{ x = 3; y = &x; *y = 5; return *(&y + 8); }")))))
