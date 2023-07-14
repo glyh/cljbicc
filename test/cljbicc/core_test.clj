@@ -51,15 +51,15 @@
 
 (deftest single-character-variables
   (testing "Compiling single character variables"
-    (is (= 3 (compile-and-run "{a = 3; return a;}")))
-    (is (= 8 (compile-and-run "{a = 3; z = 5; return a + z;}")))
-    (is (= 6 (compile-and-run "{a = b = 3; return a + b;}")))))
+    (is (= 3 (compile-and-run "{int a = 3; return a;}")))
+    (is (= 8 (compile-and-run "{int a = 3, z = 5; return a + z;}")))
+    (is (= 6 (compile-and-run "{int a, b; a = b = 3; return a + b;}")))))
 
 (deftest multi-character-variables 
   (testing "Test multi char variables"
-    (is (= 3 (compile-and-run "{foo = 3; return foo;}")))
-    (is (= 8 (compile-and-run "{foo123 = 3; bar = 5; return foo123 + bar;}")))
-    (is (= 6 (compile-and-run "{a = b = 3; return a + b;}")))))
+    (is (= 3 (compile-and-run "{ int foo; foo = 3; return foo;}")))
+    (is (= 8 (compile-and-run "{ int foo123 = 3; int bar; bar = 5; return foo123 + bar;}")))
+    (is (= 6 (compile-and-run "{int a, b = 3; a = b = 3; return a + b;}")))))
 
 (deftest return
   (testing "Test return"
@@ -86,19 +86,19 @@
   
 (deftest for-stmt
   (testing "Test for stmt"
-    (is (= 55 (compile-and-run "{ i=0; j=0; for (i=0; i<=10; i=i+1) j=i+j; return j; }")))
+    (is (= 55 (compile-and-run "{ int i=0; int j=0; for (i=0; i<=10; i=i+1) j=i+j; return j; }")))
     (is (= 3 (compile-and-run "{for(;;) {return 3; } return 5;}")))))
 
 (deftest while-stmt
   (testing "Test while stmt"
-    (is (= 10 (compile-and-run "{i = 0; while(i < 10) {i = i + 1; } return i; }")))))
+    (is (= 10 (compile-and-run "{int i = 0; while(i < 10) {i = i + 1; } return i; }")))))
 
 (deftest ref-and-deref
   (testing "Test ref and deref"
-    (is (= 3 (compile-and-run "{ x = 3; return *&x; }")))
-    (is (= 3 (compile-and-run "{ x = 3; y = &x; z = &y; return **z; }")))
+    (is (= 3 (compile-and-run "{ int x = 3; return *&x; }")))
+    (is (= 3 (compile-and-run "{ int x = 3; int y = &x; int z = &y; return **z; }")))
     ;; WARN: these two case is different from cases we have in chibicc because the 
     ;; memory layout I use is different from the one used in chibicc
-    (is (= 5 (compile-and-run "{ x = 3; y = 5; return *(&x - 1); }")))
-    (is (= 3 (compile-and-run "{ x = 3; y = 5; return *(&y + 1); }")))
-    (is (= 5 (compile-and-run "{ x = 3; y = &x; *y = 5; return *(1 + &y); }")))))
+    (is (= 5 (compile-and-run "{ int x = 3; int y = 5; return *(&x - 1); }")))
+    (is (= 3 (compile-and-run "{ int x = 3; int y = 5; return *(&y + 1); }")))
+    (is (= 5 (compile-and-run "{ int x = 3; int y = &x; *y = 5; return *(1 + &y); }")))))

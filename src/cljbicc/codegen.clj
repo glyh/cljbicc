@@ -114,25 +114,27 @@
          _ (panic "Unexpected binary head\n")))
        (meta rhs-compiled)))))
 
-(defn try-insert-local-var [{symtab :symtab :as info} identifier]
-  (if (contains? symtab identifier)
-    info
-    (let [offset (* 8 (+ 1 (count symtab)))]
-      (->> 
-        info 
-        (setval [:symtab identifier] (- offset))
-        (setval [:stacksize] (align-to offset 16))))))
+#_(defn try-insert-local-var [{symtab :symtab :as info} identifier]
+    (if (contains? symtab identifier)
+      info
+      (let [offset (* 8 (+ 1 (count symtab)))]
+        (->> 
+          info 
+          (setval [:symtab identifier] (- offset))
+          (setval [:stacksize] (align-to offset 16))))))
     
 ; Compute the memory address of a given lval
-(defn query-or-generate-local-var-offset [identifier]
- (swap! info #(try-insert-local-var %1 identifier))
- (get-in @info [:symtab identifier]))
+#_(defn query-or-generate-local-var-offset [identifier]
+   (swap! info #(try-insert-local-var %1 identifier))
+   (get-in @info [:symtab identifier]))
 
 (defn compile-addr [lval]
   (m/match lval
     [:id identifier] 
-    (let [offset (query-or-generate-local-var-offset identifier)]
-      [[:lea [:mem offset :%rbp] :%rax]])
+    (let [syminfo (select-one [ATOM :symtab identifier] info)]
+      (if syminfo
+        [[:lea [:mem (:offset syminfo) :%rbp] :%rax]]
+        (panic "Unknown local variable %s" lval)))
     [:deref inner]
     (compile-exp inner)
     _ (panic "Unexpected address: %s\n" lval)))
@@ -231,20 +233,57 @@
      (compile-stmt step)
      [[:jmp begin-label]
       [:label end-label]])))
+
+
+(defn get-type [cnt declspec]
+  ; (printf "%s %s %n" cnt declspec)
+  (if (= cnt 0)
+    (keyword declspec)
+    [:pointer (get-type (- cnt 1) declspec)]))
+
+(defn compile-declaration
+  [declspec [_ pointer-count name & maybe-exp]]
+  #_(printf "Compiling: %s %s %s %s %n" 
+            declspec pointer-count name maybe-exp)
+  (let [symtab (select-one [ATOM :symtab] info)]
+    (if (symtab name)
+      (panic "Redeclaration of variable %s in %s" name [type [pointer-count name maybe-exp]])
+      (let [offset (* 8 (+ 1 (count symtab)))
+            type (get-type pointer-count declspec)]
+        (->>
+         info
+         (setval [ATOM :symtab name]
+                 {:offset (- offset)
+                  :type type})
+         (setval [ATOM :stacksize] (align-to offset 16)))
+        #_(println @info)
+        (if (empty? maybe-exp)
+          []
+          (compile-stmt [:expr-stmt [:exp [:assign [:id name] (first maybe-exp)]]]))))))
   
 (defn compile-stmt
   "Compile a statement to assembly"
   [stmt]
+  #_(println "Compiling %s" stmt)
   (m/match stmt
-    [:expr-stmt [:exp expr]] (compile-exp expr)
     [:if-stmt [:exp test] then else] (compile-if test then else)
     [:if-stmt [:exp test] then] (compile-if test then nop)
     [:for-stmt init test step body] (compile-for init test [:expr-stmt step] body)
     [:for-stmt init test body] (compile-for init test nop body)
     [:while-stmt test body] (compile-for nop [:expr-stmt test] nop body)
+
+    [:declaration [:declspec type] & declarators] 
+    (let [res (mapcat (partial compile-declaration type) declarators)]
+      ; (println "we got" res) 
+      ; (flush)
+      res)
+    [:expr-stmt [:exp expr]] (compile-exp expr)
     [:expr-stmt] [] ; null statement
-    [:block-stmt & stmts] (apply concat (map compile-stmt stmts))
+
+    [:block-stmt & stmts] (mapcat compile-stmt stmts)
+
     [:return-stmt [:exp expr]] (concat (compile-exp expr) [[:jmp :.L.return]])
+
     _ (panic "Unexpected stmt head: %s\n" stmt)))
   
 (defn compile-program 

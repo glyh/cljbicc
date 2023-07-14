@@ -7,13 +7,20 @@ program = stmt
 (* Statements *)
 (**************)
 
-<stmt> = expr-stmt | return-stmt | block-stmt | if-stmt | for-stmt | while-stmt
+<stmt> = expr-stmt | return-stmt | block-stmt | if-stmt | for-stmt | while-stmt | declaration
 
 while-stmt = <"while" "("> exp <")"> stmt
 
 if-stmt = <"if" "("> exp <")"> stmt (<"else"> stmt)?
 
 for-stmt = <"for" "("> expr-stmt expr-stmt exp? <")"> stmt
+
+declaration = declspec declarator (<","> declarator)* <";">
+
+declspec = "int"
+declarator = "*"* id (<"="> exp)?
+
+(* the more basic statements *)
 
 block-stmt = <"{"> stmt* <"}">
 
