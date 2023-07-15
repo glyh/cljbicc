@@ -60,9 +60,10 @@ negative = <"-"> exp3
 addr = <"&"> exp3
 deref = <"*"> exp3
 
-<exp-atom> = INT | id | <"("> exp1 <")">
+<exp-atom> = INT | id | <"("> exp1 <")"> | call
 
 id = IDENT
+call = id <"("> <")">
 
 
 (*********)
