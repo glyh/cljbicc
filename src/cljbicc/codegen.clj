@@ -18,6 +18,8 @@
 (declare compile-exp)
 (declare compile-assign)
 
+(def argregs [:%rdi :%rsi :%rdx :%rcx :%r8 :%r9])
+
 (defn compile-binary [op lhs rhs] 
   (m/match 
     op
@@ -166,7 +168,15 @@
 (defn compile-exp [exp]
   (m/match exp
     ;; this won't work yet because for now we can't type check this.
-    [:call [:id id]] [[:mov 0 :$rax] [:call id]]
+    [:call [:id fn-name] & args] 
+    (if (> (count args) 6)
+      (panic "too many arguments for function %s at %s!" fn-name exp)
+      (concat
+        (mapcat #(concat (compile-exp %1) [:push :%rax]) args)
+        (mapcat #(vector [:pop %1]) (reverse (take (count args) argregs)))
+        [[:mov 0, :%rax]
+         [:call fn-name]]))
+
     [:id id] 
     (with-meta (concat (compile-addr [:id id]) [[:mov [:mem :%rax] :%rax]]) 
                {:type (select-one [ATOM :symtab id :type] info)})

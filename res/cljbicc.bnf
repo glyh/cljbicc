@@ -63,7 +63,7 @@ deref = <"*"> exp3
 <exp-atom> = INT | id | <"("> exp1 <")"> | call
 
 id = IDENT
-call = id <"("> <")">
+call = id <"("> (exp (<","> exp)*)? <")">
 
 
 (*********)
