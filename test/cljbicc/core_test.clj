@@ -96,7 +96,7 @@
 (deftest ref-and-deref
   (testing "Test ref and deref"
     (is (= 3 (compile-and-run "{ int x = 3; return *&x; }")))
-    (is (= 3 (compile-and-run "{ int x = 3; int y = &x; int z = &y; return **z; }")))
+    (is (= 3 (compile-and-run "{ int x = 3; int* y = &x; int** z = &y; return **z; }")))
     ;; WARN: these two case is different from cases we have in chibicc because the 
     ;; memory layout I use is different from the one used in chibicc
     (is (= 5 (compile-and-run "{ int x = 3; int y = 5; return *(&x - 1); }")))

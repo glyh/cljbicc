@@ -32,7 +32,7 @@
           lhs-compiled (compile-exp lhs)
           lhs-meta (meta lhs-compiled)]
       (m/match [(:type lhs-meta) (:type rhs-meta)]
-        [(:or :int :any) (:or :int :any)]
+        [:int :int]
         (with-meta
          (concat 
            rhs-compiled
@@ -71,7 +71,7 @@
           lhs-compiled (compile-exp lhs)
           lhs-meta (meta lhs-compiled)]
       (m/match [(:type lhs-meta) (:type rhs-meta)]
-        [(:or :int :any) (:or :int :any)]
+        [:int :int]
         (with-meta
           (concat
            rhs-compiled
@@ -113,20 +113,6 @@
          :ge [[:cmp :%rdi :%rax] [:setge :%al] [:movzb :%al :%rax]]
          _ (panic "Unexpected binary head\n")))
        (meta rhs-compiled)))))
-
-#_(defn try-insert-local-var [{symtab :symtab :as info} identifier]
-    (if (contains? symtab identifier)
-      info
-      (let [offset (* 8 (+ 1 (count symtab)))]
-        (->> 
-          info 
-          (setval [:symtab identifier] (- offset))
-          (setval [:stacksize] (align-to offset 16))))))
-    
-; Compute the memory address of a given lval
-#_(defn query-or-generate-local-var-offset [identifier]
-   (swap! info #(try-insert-local-var %1 identifier))
-   (get-in @info [:symtab identifier]))
 
 (defn compile-addr [lval]
   (m/match lval
@@ -173,7 +159,6 @@
         (concat inner-compiled [[:mov [:mem :%rax] :%rax]])
         (m/match (:type inner-meta)
            [:pointer pointed] (setval [:type] pointed inner-meta)
-           :any inner-meta
            _ (panic "Type error: expected pointer in %s but got %s" inner (:type inner-meta)))))
       
     _ (panic "Unexpected unary head\n")))
@@ -181,7 +166,9 @@
 (defn compile-exp [exp]
   (m/match exp
     [:id id] 
-    (with-meta (concat (compile-addr [:id id]) [[:mov [:mem :%rax] :%rax]]) {:type :any})
+    (with-meta (concat (compile-addr [:id id]) [[:mov [:mem :%rax] :%rax]]) 
+               {:type (select-one [ATOM :symtab id :type] info)}
+               #_{:type :any})
     [op lhs rhs] (compile-binary op lhs rhs)
     [op inner] (compile-unary op inner)
     ;; NOTE: for now we only have integer and pointer so a term must be an integer
