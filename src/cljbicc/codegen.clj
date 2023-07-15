@@ -167,8 +167,7 @@
   (m/match exp
     [:id id] 
     (with-meta (concat (compile-addr [:id id]) [[:mov [:mem :%rax] :%rax]]) 
-               {:type (select-one [ATOM :symtab id :type] info)}
-               #_{:type :any})
+               {:type (select-one [ATOM :symtab id :type] info)})
     [op lhs rhs] (compile-binary op lhs rhs)
     [op inner] (compile-unary op inner)
     ;; NOTE: for now we only have integer and pointer so a term must be an integer
@@ -230,8 +229,6 @@
 
 (defn compile-declaration
   [declspec [_ pointer-count name & maybe-exp]]
-  #_(printf "Compiling: %s %s %s %s %n" 
-            declspec pointer-count name maybe-exp)
   (let [symtab (select-one [ATOM :symtab] info)]
     (if (symtab name)
       (panic "Redeclaration of variable %s in %s" name [type [pointer-count name maybe-exp]])
@@ -243,7 +240,6 @@
                  {:offset (- offset)
                   :type type})
          (setval [ATOM :stacksize] (align-to offset 16)))
-        #_(println @info)
         (if (empty? maybe-exp)
           []
           (compile-stmt [:expr-stmt [:exp [:assign [:id name] (first maybe-exp)]]]))))))
@@ -251,7 +247,6 @@
 (defn compile-stmt
   "Compile a statement to assembly"
   [stmt]
-  #_(println "Compiling %s" stmt)
   (m/match stmt
     [:if-stmt [:exp test] then else] (compile-if test then else)
     [:if-stmt [:exp test] then] (compile-if test then nop)
@@ -261,8 +256,6 @@
 
     [:declaration [:declspec type] & declarators] 
     (let [res (mapcat (partial compile-declaration type) declarators)]
-      ; (println "we got" res) 
-      ; (flush)
       res)
     [:expr-stmt [:exp expr]] (compile-exp expr)
     [:expr-stmt] [] ; null statement
@@ -281,7 +274,6 @@
     [:program stmt]
     ;; Note that compile-stmt is effectful and it affects (:stacksize @info), we have to call it earlier
     (let [stmt-generated (compile-stmt stmt)]
-      ; (println @info)
       (asm/gas 
         (concat
          [[:.globl :main]
